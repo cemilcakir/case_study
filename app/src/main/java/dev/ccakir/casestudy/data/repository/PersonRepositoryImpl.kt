@@ -3,18 +3,17 @@ package dev.ccakir.casestudy.data.repository
 import dev.ccakir.casestudy.data.datasource.DataSource
 import dev.ccakir.casestudy.data.datasource.FetchResponse
 import dev.ccakir.casestudy.utils.Result
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 
 class PersonRepositoryImpl(private val dataSource: DataSource) : PersonRepository {
 
-    override suspend fun fetchPeople(nextPage: String?): Flow<Result<FetchResponse>> {
-        return flow {
-            emit(dataSource.fetchAwait(nextPage))
+    override suspend fun fetchPeople(nextPage: String?): Result<FetchResponse> =
+        withContext(Dispatchers.IO) {
+            dataSource.fetchAwait(nextPage)
         }
-    }
 
 }
 

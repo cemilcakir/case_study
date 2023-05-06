@@ -6,6 +6,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface PersonRepository {
 
-    suspend fun fetchPeople(nextPage: String? = null): Flow<Result<FetchResponse>>
+    suspend fun fetchPeople(nextPage: String? = null): Result<FetchResponse>
 
 }

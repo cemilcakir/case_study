@@ -5,12 +5,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.ccakir.casestudy.data.repository.PersonRepository
 import dev.ccakir.casestudy.utils.Result
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,42 +26,59 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
     }
 
     private fun fetchPeople(isRefreshing: Boolean = false) {
+        if (isRefreshing) {
+            nextPage = null
+            _uiState.update {
+                it.copy(people = emptyList(), reachedEndOfThePeople = false, noPeople = false)
+            }
+        }
+
+        if (_uiState.value.reachedEndOfThePeople) {
+            return
+        }
+
         _uiState.update {
             it.copy(isFetching = true, isRefreshing = isRefreshing)
         }
 
-        if (isRefreshing) {
-            nextPage = null
-        }
-
         viewModelScope.launch {
-            personRepository.fetchPeople(nextPage)
-                .flowOn(Dispatchers.IO)
-                .onEach { result ->
-                    when (result) {
-                        is Result.Error -> {
-                            _uiState.update {
-                                it.copy(
-                                    isFetching = false,
-                                    isRefreshing = false,
-                                    error = result.error
-                                )
-                            }
-                        }
+            when (val result = personRepository.fetchPeople(nextPage)) {
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isFetching = false,
+                            isRefreshing = false,
+                            error = result.error + "\nWill try again in 3 seconds."
+                        )
+                    }
 
-                        is Result.Success -> {
-                            _uiState.update {
-                                it.copy(
-                                    isFetching = false,
-                                    isRefreshing = false,
-                                    people = result.data.people
-                                )
-                            }
-                            nextPage = result.data.next
+                    delay(3000)
+                    fetchPeople(isRefreshing)
+                }
+
+                is Result.Success -> {
+                    val people = _uiState.value.people.toMutableList()
+                    val peopleSizeOld = people.size
+
+                    result.data.people.forEach { person ->
+                        if (people.none { it.id == person.id }) {
+                            people.add(person)
                         }
                     }
+                    val peopleSizeNew = people.size
+
+                    _uiState.update {
+                        it.copy(
+                            isFetching = false,
+                            isRefreshing = false,
+                            people = people,
+                            noPeople = people.isEmpty(),
+                            reachedEndOfThePeople = peopleSizeOld == peopleSizeNew
+                        )
+                    }
+                    nextPage = result.data.next
                 }
-                .collect()
+            }
         }
     }
 

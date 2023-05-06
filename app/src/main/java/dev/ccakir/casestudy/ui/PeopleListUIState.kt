@@ -7,4 +7,6 @@ data class PeopleListUIState(
     val isFetching: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val reachedEndOfThePeople: Boolean = false,
+    val noPeople: Boolean = false,
 )
