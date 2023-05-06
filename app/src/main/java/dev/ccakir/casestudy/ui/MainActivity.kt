@@ -4,14 +4,17 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import dev.ccakir.casestudy.databinding.ActivityMainBinding
-import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -50,27 +53,32 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        peopleListViewModel.uiState.onEach { state ->
-            if (state.reachedEndOfThePeople) {
-                Snackbar.make(
-                    binding.root,
-                    "Displaying all of the people. Refresh the page to get new people.",
-                    Snackbar.LENGTH_SHORT
-                ).show()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                peopleListViewModel.uiState.onEach { state ->
+                    if (state.reachedEndOfThePeople) {
+                        Snackbar.make(
+                            binding.root,
+                            "Displaying all of the people. Refresh the page to get new people.",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    adapter.submitList(state.people)
+
+                    binding.srlPeople.isRefreshing = state.isRefreshing
+
+                    binding.loadingIndicator.visibility =
+                        if (state.isFetching) View.VISIBLE else View.GONE
+
+                    binding.txtNoPeople.visibility = if (state.noPeople) View.VISIBLE else View.GONE
+
+                    state.error?.let { errorMessage ->
+                        Snackbar.make(binding.root, errorMessage, Snackbar.LENGTH_SHORT).show()
+                        peopleListViewModel.onEvent(PeopleListUIEvent.DisplayedErrorMessage)
+                    }
+                }.collect()
             }
-
-            adapter.submitList(state.people)
-
-            binding.srlPeople.isRefreshing = state.isRefreshing
-
-            binding.loadingIndicator.visibility = if (state.isFetching) View.VISIBLE else View.GONE
-
-            binding.txtNoPeople.visibility = if (state.noPeople) View.VISIBLE else View.GONE
-
-            state.error?.let { errorMessage ->
-                Snackbar.make(binding.root, errorMessage, Snackbar.LENGTH_SHORT).show()
-                peopleListViewModel.onEvent(PeopleListUIEvent.DisplayedErrorMessage)
-            }
-        }.launchIn(lifecycleScope)
+        }
     }
 }
