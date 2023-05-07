@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.ccakir.casestudy.data.repository.PersonRepository
 import dev.ccakir.casestudy.utils.Result
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +21,8 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
     val uiState = _uiState.asStateFlow()
 
     private var nextPage: String? = null
+
+    private var fetchPeopleJob: Job? = null
 
     init {
         fetchPeople()
@@ -37,11 +40,13 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
             return
         }
 
+        cancelFetchPeopleJob()
+
         _uiState.update {
             it.copy(isFetching = true, isRefreshing = isRefreshing)
         }
 
-        viewModelScope.launch {
+        fetchPeopleJob = viewModelScope.launch {
             when (val result = personRepository.fetchPeople(nextPage)) {
                 is Result.Error -> {
                     _uiState.update {
@@ -93,6 +98,16 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
             PeopleListUIEvent.ReachedEndOfThePage -> fetchPeople()
             PeopleListUIEvent.Refreshed -> fetchPeople(true)
         }
+    }
+
+    private fun cancelFetchPeopleJob() {
+        fetchPeopleJob?.cancel()
+        fetchPeopleJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cancelFetchPeopleJob()
     }
 
 }

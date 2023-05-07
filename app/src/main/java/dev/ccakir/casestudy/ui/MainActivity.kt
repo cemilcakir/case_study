@@ -1,9 +1,9 @@
 package dev.ccakir.casestudy.ui
 
 import android.os.Bundle
-import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -66,12 +66,13 @@ class MainActivity : AppCompatActivity() {
 
                     adapter.submitList(state.people)
 
-                    binding.srlPeople.isRefreshing = state.isRefreshing
+                    with(binding) {
+                        srlPeople.isRefreshing = state.isRefreshing
 
-                    binding.loadingIndicator.visibility =
-                        if (state.isFetching) View.VISIBLE else View.GONE
+                        loadingIndicator.isVisible = state.isFetching && !state.isRefreshing
 
-                    binding.txtNoPeople.visibility = if (state.noPeople) View.VISIBLE else View.GONE
+                        txtNoPeople.isVisible = state.noPeople
+                    }
 
                     state.error?.let { errorMessage ->
                         Snackbar.make(binding.root, errorMessage, Snackbar.LENGTH_SHORT).show()
