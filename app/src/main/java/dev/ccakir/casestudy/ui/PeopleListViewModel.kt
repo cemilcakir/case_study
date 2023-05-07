@@ -78,7 +78,7 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
                             isRefreshing = false,
                             people = people,
                             noPeople = people.isEmpty(),
-                            reachedEndOfThePeople = peopleSizeOld == peopleSizeNew
+                            reachedEndOfThePeople = people.isNotEmpty() && peopleSizeOld == peopleSizeNew
                         )
                     }
                     nextPage = result.data.next
