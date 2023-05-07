@@ -72,13 +72,17 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
                     }
                     val peopleSizeNew = people.size
 
+                    val reachedEndOfThePeople =
+                        people.isNotEmpty() && peopleSizeOld == peopleSizeNew
+
                     _uiState.update {
                         it.copy(
                             isFetching = false,
                             isRefreshing = false,
                             people = people,
                             noPeople = people.isEmpty(),
-                            reachedEndOfThePeople = people.isNotEmpty() && peopleSizeOld == peopleSizeNew
+                            reachedEndOfThePeople = reachedEndOfThePeople,
+                            willDisplayReachedEndOfThePeopleMessage = reachedEndOfThePeople,
                         )
                     }
                     nextPage = result.data.next
@@ -97,6 +101,9 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
 
             PeopleListUIEvent.ReachedEndOfThePage -> fetchPeople()
             PeopleListUIEvent.Refreshed -> fetchPeople(true)
+            PeopleListUIEvent.DisplayedReachedEndOfThePageMessage -> _uiState.update {
+                it.copy(willDisplayReachedEndOfThePeopleMessage = false)
+            }
         }
     }
 

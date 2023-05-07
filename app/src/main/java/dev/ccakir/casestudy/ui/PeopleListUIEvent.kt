@@ -7,4 +7,7 @@ sealed interface PeopleListUIEvent {
     object Refreshed : PeopleListUIEvent
 
     object DisplayedErrorMessage : PeopleListUIEvent
+
+    object DisplayedReachedEndOfThePageMessage : PeopleListUIEvent
+
 }

@@ -8,5 +8,6 @@ data class PeopleListUIState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val reachedEndOfThePeople: Boolean = false,
+    val willDisplayReachedEndOfThePeopleMessage: Boolean = false,
     val noPeople: Boolean = false,
 )

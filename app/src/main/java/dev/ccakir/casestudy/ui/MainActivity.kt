@@ -56,12 +56,13 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 peopleListViewModel.uiState.onEach { state ->
-                    if (state.reachedEndOfThePeople) {
+                    if (state.reachedEndOfThePeople && state.willDisplayReachedEndOfThePeopleMessage) {
                         Snackbar.make(
                             binding.root,
                             "Displaying all of the people. Refresh the page to get new people.",
                             Snackbar.LENGTH_SHORT
                         ).show()
+                        peopleListViewModel.onEvent(PeopleListUIEvent.DisplayedReachedEndOfThePageMessage)
                     }
 
                     adapter.submitList(state.people)
