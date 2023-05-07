@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
 class PeopleListViewModel @Inject constructor(private val personRepository: PersonRepository) :
@@ -26,6 +27,23 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
 
     init {
         fetchPeople()
+    }
+
+
+    fun onEvent(event: PeopleListUIEvent) {
+        when (event) {
+            PeopleListUIEvent.DisplayedErrorMessage -> {
+                _uiState.update {
+                    it.copy(error = null)
+                }
+            }
+
+            PeopleListUIEvent.ReachedEndOfThePage -> fetchPeople()
+            PeopleListUIEvent.Refreshed -> fetchPeople(true)
+            PeopleListUIEvent.DisplayedReachedEndOfThePageMessage -> _uiState.update {
+                it.copy(willDisplayReachedEndOfThePeopleMessage = false)
+            }
+        }
     }
 
     private fun fetchPeople(isRefreshing: Boolean = false) {
@@ -53,11 +71,11 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
                         it.copy(
                             isFetching = false,
                             isRefreshing = false,
-                            error = result.error + "\nWill try again in 3 seconds."
+                            error = result.error + "\nWill try again in $RETRY_IN seconds."
                         )
                     }
 
-                    delay(3000)
+                    delay(RETRY_IN.seconds)
                     fetchPeople(isRefreshing)
                 }
 
@@ -65,11 +83,15 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
                     val people = _uiState.value.people.toMutableList()
                     val peopleSizeOld = people.size
 
+                    val currentPeopleIds =
+                        _uiState.value.people.mapTo(HashSet(_uiState.value.people.size)) { it.id }
+
                     result.data.people.forEach { person ->
-                        if (people.none { it.id == person.id }) {
+                        if (!currentPeopleIds.contains(person.id)) {
                             people.add(person)
                         }
                     }
+
                     val peopleSizeNew = people.size
 
                     val reachedEndOfThePeople =
@@ -91,22 +113,6 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
         }
     }
 
-    fun onEvent(event: PeopleListUIEvent) {
-        when (event) {
-            PeopleListUIEvent.DisplayedErrorMessage -> {
-                _uiState.update {
-                    it.copy(error = null)
-                }
-            }
-
-            PeopleListUIEvent.ReachedEndOfThePage -> fetchPeople()
-            PeopleListUIEvent.Refreshed -> fetchPeople(true)
-            PeopleListUIEvent.DisplayedReachedEndOfThePageMessage -> _uiState.update {
-                it.copy(willDisplayReachedEndOfThePeopleMessage = false)
-            }
-        }
-    }
-
     private fun cancelFetchPeopleJob() {
         fetchPeopleJob?.cancel()
         fetchPeopleJob = null
@@ -115,6 +121,10 @@ class PeopleListViewModel @Inject constructor(private val personRepository: Pers
     override fun onCleared() {
         super.onCleared()
         cancelFetchPeopleJob()
+    }
+
+    companion object {
+        private const val RETRY_IN = 3
     }
 
 }
